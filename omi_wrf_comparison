@@ -1,0 +1,366 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Feb  9 11:46:44 2018
+
+@author: eetth
+"""
+
+  # OMI NO2.PY
+# Written by Tom Thorp & Richard Pope (University of Leeds) 19/10/17
+# Reading and plotting OMI NO2 data
+#
+#Import Libraries 
+import h5py    
+import numpy as np  
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
+import subprocess
+import glob
+from netCDF4 import Dataset as NetCDFFile
+from scipy.interpolate import interp1d as interp
+
+#initialicountersing variables
+mdi = -999.99
+n_months = 12
+start_day = '2011m0801'
+end_day = '2011m0801'
+n_mod_lons=139                                   #number of lon grid boxes over the UK domain 
+n_mod_lats=139                                    #number of lat grid boxes over the UK domain
+n_mod_levs=32                                #number of model levels 
+n_hours=24
+n_tsteps=720                                 #1 UTC on 2010-06-01
+
+#IAT 1993 ref time for 01/01/2011 00 utc
+ref_start = 567993600
+n_days_2011 = 365
+ref_times = np.zeros([n_days_2011])
+for i_day in range(n_days_2011):
+    ref_times[i_day] = ref_start + i_day*86400
+
+#read in model data
+logical_model= True #set model logical
+
+if logical_model == True:
+
+   #read in model data 
+   wrf = NetCDFFile('/nfs/a68/eetth/wrf/regridded/2011_aug_01_no2_0.1_cf.nc')
+   wrf_pres = NetCDFFile('/nfs/a68/eetth/wrf/regridded/2011_aug_01_hpa_0.1_cf.nc')
+   wrf_pres = wrf_pres.variables['p_e'][:,:,:,:]
+   wrf_pres = np.array(wrf_pres)
+   wrf_no2 = wrf.variables['no2_e'][:,:,:,:]
+   wrf_no2 = np.array(wrf_no2)
+   wrf_lons = wrf.variables['longitude'][:]
+   wrf_lats = wrf.variables['latitude'][:]
+   wrf_time = np.arange(0,n_hours,1)
+
+   #remove masked data
+   bad_data = np.where(wrf_no2>1.0e+20)    
+   wrf_no2[bad_data]=-999.99
+   bad_data = np.where(wrf_pres>1.0e+20)    
+   wrf_pres[bad_data]=-999.99
+   
+
+#Create data array
+year_string = '2011'
+leap_year = False
+if leap_year == False: n_days = 365 #not leap year
+if leap_year == True: n_days = 366 #leap year
+if leap_year == False: n_month_days=[31,28,31,30,31,30,31,31,30,31,30,31]
+if leap_year == True: n_month_days=[31,29,31,30,31,30,31,31,30,31,30,31]
+date_string = ["" for x in range(n_days)]
+#date_string = np.array(date_string)
+month_arr=['01','02','03','04','05','06','07','08','09','10','11','12']  
+day_arr=['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31']
+
+#merge strings together 
+cnt=0
+for i_month in range(n_months):
+    for i_day in range(n_month_days[i_month]):    
+        date_string[cnt+i_day] = year_string+'m'+month_arr[i_month] + day_arr[i_day]    
+    cnt = cnt + n_month_days[i_month]
+start = date_string.index(start_day)
+end = date_string.index(end_day)
+date_list=date_string[start:end+1]
+                                      
+# Variable pathways
+pathway_data ='/HDFEOS/SWATHS/DominoNO2/Data Fields/TroposphericVerticalColumn' #2d 
+pathway_uncertainty ='/HDFEOS/SWATHS/DominoNO2/Data Fields/TroposphericVerticalColumnError'#2d
+pathway_uncertainty_ak = '/HDFEOS/SWATHS/DominoNO2/Data Fields/VCDTropErrorUsingAvKernel' #2d
+pathway_flag ='/HDFEOS/SWATHS/DominoNO2/Data Fields/TroposphericColumnFlag' #2d 
+pathway_AK ='/HDFEOS/SWATHS/DominoNO2/Data Fields/AveragingKernel' #3d 
+pathway_trop_lev ='/HDFEOS/SWATHS/DominoNO2/Data Fields/TM4TropoPauseLevel' #2d 
+pathway_TM4_SP ='/HDFEOS/SWATHS/DominoNO2/Data Fields/TM4SurfacePressure' #2d 
+pathway_TM4_PA ='/HDFEOS/SWATHS/DominoNO2/Data Fields/TM4PressurelevelA' #1d
+pathway_TM4_PB ='/HDFEOS/SWATHS/DominoNO2/Data Fields/TM4PressurelevelB' #1d
+pathway_amf_trop ='/HDFEOS/SWATHS/DominoNO2/Data Fields/AirMassFactorTropospheric' #2d
+pathway_amf ='/HDFEOS/SWATHS/DominoNO2/Data Fields/AirMassFactor' #2d
+pathway_lats ='/HDFEOS/SWATHS/DominoNO2/Geolocation Fields/Latitude' #2d 
+pathway_lons ='/HDFEOS/SWATHS/DominoNO2/Geolocation Fields/Longitude' #2d 
+pathway_time ='/HDFEOS/SWATHS/DominoNO2/Geolocation Fields/Time' #1d 
+pathway_cloudfrac ='/HDFEOS/SWATHS/DominoNO2/Data Fields/CloudFraction' #2d 
+pathway_slant_total ='/HDFEOS/SWATHS/DominoNO2/Data Fields/SlantColumnAmountNO2' #2d 
+
+#grid data
+lon_in = np.arange(70.,110.05,0.25) # longitude edges of old datather_types/2010/data_2010/OMI-Aura_L2-OMDOMINO_2010m06*"
+lat_in = np.arange(45,65.05,0.25) # latitude edges of old data
+nlons = np.size(lon_in)
+nlats = np.size(lat_in)
+
+#Read in logical
+logical_sat = True
+if logical_sat == True: 
+    
+    # define no2 grid
+    no2_array=np.zeros([nlons-1,nlats-1, np.size(date_list)]) +mdi
+
+    # Looping over days
+    for i_day in range(np.size(date_list)):
+        print(100.0*(i_day+1)/np.size(date_list))    
+    
+        # Define file name for june 2010
+        path="/nfs/a128/eerjp/lamb_weather_types/2011/data_2011/OMI-Aura_L2-OMDOMINO_"+ date_list[i_day] + "*"
+        filecounters = glob.glob(path)
+    
+        #Loop over all files in time period
+        counter = 0
+        for file in filecounters: 
+            
+            # Read in HDF file
+            no2_file = h5py.File(file, 'r')
+            # Read in NO2 data
+            no2 = no2_file[pathway_data]
+            no2 = no2[:,:] # Extract Matrix information
+            # Read in NO2 error data
+            error = no2_file[pathway_uncertainty]
+            error = error[:,:] 
+            # Read in quality flag data
+            flags = no2_file[pathway_flag]
+            flags = flags[:,:]
+            # Read in Lons, Lats, Time = IAT 93
+            lats = no2_file[pathway_lats]
+            lats = lats[:,:]
+            lons = no2_file[pathway_lons]
+            lons = lons[:,:]
+            time = no2_file[pathway_time]
+            time = time[:]
+            # Read in cloud fraction
+            cloudfrac = no2_file[pathway_cloudfrac]
+            cloudfrac = cloudfrac[:,:]*0.001
+            
+            # Read in Averagin Kernal 
+            ak = no2_file[pathway_AK]
+            ak = ak[:,:,:]*0.001
+            # Read in Tropopause Level
+            trop_lev = no2_file[pathway_trop_lev] 
+            trop_lev = trop_lev[:,:]
+            # Read in TM4 Surface Pressure
+            tm4_sp = no2_file[pathway_TM4_SP]
+            tm4_sp = tm4_sp[:,:]
+            # Read in TM4 Pressure Level A
+            tm4_pa = no2_file[pathway_TM4_PA]
+            tm4_pa = tm4_pa[:]
+            # Read in TM4 Pressure level B
+            tm4_pb = no2_file[pathway_TM4_PB]
+            tm4_pb = tm4_pb[:]
+            # Read in Tropospheric Air Mass Factor
+            amf_trop = no2_file[pathway_amf_trop]
+            amf_trop = amf_trop[:,:]
+            # Read in Air Mass Factor
+            amf = no2_file[pathway_amf]
+            amf = amf[:,:]
+            # Read in NO2 Amount in Slant Column
+            slant_total = no2_file[pathway_slant_total]
+            slant_total = slant_total[:,:]
+            # Read in Troposphere error using AK
+            error_ak = no2_file[pathway_uncertainty_ak]
+            error_ak = error_ak[:,:]
+                                                                                                                                                                                                    
+            #Construct Pressure levels  
+            swath_row = np.size(ak[0,0,:])
+            swath_col = np.size(ak[0,:,0])
+            swath_alt = np.size(ak[:,0,0])
+            pres = np.zeros([swath_col,swath_row,swath_alt]) + mdi
+            for i in range(swath_col):
+                for j in range(swath_row):
+                    for i_lev in range(swath_alt):
+                        if tm4_sp[i,j] > 0:    
+                            pres[i,j,i_lev] = tm4_sp[i,j]*tm4_pb[i_lev]+(tm4_pa[i_lev]/100.0)
+            
+            #Reconstruct time array to match swath dimensions in 2d
+            dim_1 = np.size(flags[:,0])
+            dim_2 = np.size(flags[0,:])
+            dummy_time = np.empty([dim_1, dim_2])
+            for i in range(dim_2):
+                dummy_time[:,i] = time
+            time = dummy_time
+  
+            # Store first loop of data
+            if counter == 0:
+                
+                # Filter out the bad data
+                good_data=np.where((no2 > 0) & (error > 0) & (flags == 0) & (cloudfrac > 0) & (cloudfrac < 0.2))
+                no2_new=no2[good_data]
+                lats_new=lats[good_data]
+                lons_new=lons[good_data]
+                time_new=time[good_data]
+                trop_lev_new=trop_lev[good_data]
+                amf_trop_new = amf_trop[good_data]
+                amf_new = amf[good_data]
+                slant_total_new = slant_total[good_data]
+                error_ak_new = error_ak[good_data]
+                
+                #add in all 2d variables that have been read in
+                #print(np.shape(no2_new))
+                
+                #Generate new array for AK
+                ak_new = np.zeros([np.size(no2_new),swath_alt]) +mdi
+                pres_new = np.zeros([np.size(no2_new),swath_alt]) +mdi
+                for i_lev in range(swath_alt):
+                    tmp_ak = ak[i_lev,:,:]
+                    ak_new[:,i_lev] = tmp_ak[good_data]
+                    tmp_pres = pres[:,:,i_lev]
+                    pres_new[:,i_lev] = tmp_pres[good_data]
+                    
+            if counter > 0:
+                
+                # Filter out the bad data
+                good_data=np.where((no2 > 0) & (error > 0) & (flags == 0) & (cloudfrac > 0) & (cloudfrac < 0.2))
+                no2=no2[good_data]
+                lats=lats[good_data]
+                lons=lons[good_data]
+                time=time[good_data]
+                trop_lev=trop_lev[good_data]
+                amf_trop=amf_trop[good_data]
+                amf=amf[good_data]
+                slant_total = slant_total[good_data]
+                error_ak = error_ak[good_data]
+                
+                #Generate new array for AK
+                ak2=np.zeros([np.size(no2),swath_alt]) +mdi
+                pres2 = np.zeros([np.size(no2),swath_alt]) +mdi
+                for i_lev in range(swath_alt):
+                    tmp_ak = ak[i_lev,:,:]
+                    tmp_pres = pres[:,:,i_lev]
+                    ak2[:,i_lev] = tmp_ak[good_data]
+                    pres2[:,i_lev] = tmp_pres[good_data]
+                    
+                #read in here following on from line 202
+                #print(np.shape(no2))
+                
+                #concatenating multiple files
+                no2_new = np.concatenate((no2_new, no2), axis=0)
+                lons_new = np.concatenate((lons_new,lons))
+                lats_new = np.concatenate((lats_new,lats))
+                time_new = np.concatenate((time_new,time))
+                ak_new = np.concatenate((ak_new, ak2),axis=0)
+                trp_lev_new = np.concatenate((trop_lev_new,trop_lev),axis=0)
+                amf_trop_new = np.concatenate((amf_trop_new,amf_trop),axis=0)
+                amf_new = np.concatenate((amf_new,amf),axis=0)
+                slant_total_new = np.concatenate((slant_total_new,slant_total),axis=0)
+                error_ak_new = np.concatenate((error_ak_new,error_ak),axis=0)
+                pres_new = np.concatenate((pres_new, pres2),axis=0)
+
+                #concatenate following on from line 213
+                #print(np.shape(no2_new))
+                
+            #Increase counter
+            counter = counter +1
+            print counter
+            print np.shape(ak)
+            print np.shape(ak_new)
+            print np.shape(ak2)
+        #loop over retrievals
+        for i_ret in range(np.size(no2_new)):
+            if (lats_new[i_ret] > 43) &  (lats_new[i_ret] < 85) & (lons_new[i_ret] > 6) &  (lons_new[i_ret] < 154):
+                          
+                #Colocate model and satellite 
+                lon_loc = np.where(np.absolute(wrf_lons-lons_new[i_ret]) == np.min(np.absolute(wrf_lons-lons_new[i_ret])))
+                lat_loc = np.where(np.absolute(wrf_lats-lats_new[i_ret]) == np.min(np.absolute(wrf_lats-lats_new[i_ret])))
+                temp_time = (time[i_ret]-ref_times[start+i_day])/3600.0
+                time_loc = np.where(np.absolute(wrf_time-temp_time) == np.min(np.absolute(wrf_time-temp_time)))
+                
+                #Extract model data
+                tmp_wrf_no2 = np.squeeze(wrf_no2[n_hours*i_day:n_hours*i_day+n_hours,:,lat_loc,lon_loc])
+                tmp_wrf_no2 = np.squeeze(tmp_wrf_no2[time_loc,:])
+                tmp_wrf_pres = np.squeeze(wrf_pres[n_hours*i_day:n_hours*i_day+n_hours,:,lat_loc,lon_loc])
+                tmp_wrf_pres = np.squeeze(tmp_wrf_pres[time_loc,:])
+                                
+                #Calculate satellite random error component 
+                term_1 = np.square(error_ak_new[i_ret])
+                term_2 = np.square(0.4*no2_new[i_ret])
+                term_3 = np.square(0.25/amf_trop_new[i_ret])
+                temp_error = term_1 - term_2 - term_3
+                
+                #Calculate random error based on positve or negative error
+                if temp_error < 0:
+                    random_error = 0.5*error_ak_new[i_ret]
+                if temp_error >= 0:
+                    random_error = amf_trop_new[i_ret]*np.sqrt(temp_error)
+                
+                #Check if model data is realistic
+                if (tmp_wrf_no2[0] > 0.0) & (tmp_wrf_pres[0] > 0.0):
+                    
+                    #Interpolate model profile to satellite pressure grid
+                    pres_prof = pres_new[i_ret,:]  
+
+                    wrf_no2_int = np.interp(pres_prof,tmp_wrf_pres,tmp_wrf_no2)
+                    
+                    #Calculate sub-column mass
+                    n_p_levs = np.size(pres_prof)
+                    p_barrier = np.append(pres_prof[0],(pres_prof[0:n_p_levs-1]+pres_prof[1:n_p_levs])/2.0)
+                    p_barrier = np.append(p_barrier,0.0)
+                    stop
+        #nested loops over domain 
+        for i_lon in range(nlons-1):
+            #print(100.0*(i_lon+1)/nlons)
+            for i_lat in range(nlats-1):
+                
+                #find data in each grid cell
+                loc = np.where((lons_new >= lon_in[i_lon]) & (lons_new < lon_in[i_lon+1]) & (lats_new >= lat_in[i_lat]) & (lats_new < lat_in[i_lat+1]))
+                loc_count = np.size(loc)
+                
+                #get mean if grid box has data in
+                if loc_count > 0:
+                    
+                    #extract data for no2 grid square
+                    temp_no2 = no2_new[loc]
+                    
+                    #calculate mean
+                    no2_array[i_lon, i_lat, i_day] = np.mean(temp_no2)
+    
+    #replace mdi with nan
+    loc_bad=np.where(no2_array == mdi)
+    no2_array[loc_bad]=np.nan
+    
+    #generate h5f save file
+    h5f = h5py.File('/nfs/see-fs-01_users/earrjpo/no2_array.h5f', 'w')
+    h5f.create_dataset('no2_array', data=no2_array)
+    h5f.close()
+#If logical set to false, read data in     
+if logical_sat != True: 
+    no2_file = h5py.File('/nfs/see-fs-01_users/earrjpo/no2_array.h5f', 'r')
+    pathway = 'no2_array'
+    no2_array = no2_file[pathway]
+    no2_array = no2_array[:,:]
+
+# Setup for map doamin
+map = Basemap(projection='merc',llcrnrlon=70.,llcrnrlat=45.,urcrnrlon=110.,urcrnrlat=65.,resolution='c') #mercator map projection, ll = lowe$
+map.drawcoastlines()
+map.drawcountries()
+map.drawlsmask(land_color='Linen', ocean_color='#CCFFFF')
+parallels = np.arange(40,85,2.) #adding in lines of latitude
+meridians = np.arange(40,120,10.) #adding in lines of longitude
+map.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
+map.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
+
+#set lat & lon grid box centres
+lons_centre = lon_in[0:nlons-1] + 0.125
+lats_centre = lat_in[0:nlats-1] + 0.125
+lats,lons= np.meshgrid(lats_centre,lons_centre) #setting data to fit onto map
+x,y = map(lons,lats)
+
+# contour no2 data onto map
+map.contourf(x,y,no2_array[:,:,29],np.arange(0,5,0.5)) #adding on no2 data for day in file
+map.colorbar(label=('OMI NO$\mathregular{_{2}}$ (x10$\mathregular{^{15}}$ molec cm$\mathregular{^{-2}}$)'))
+
