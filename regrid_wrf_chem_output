@@ -1,0 +1,62 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 26 09:39:17 2018
+
+@author: eetth
+"""
+# import libraries
+import cf, cfplot as cfp
+import numpy as np 
+import ESMF
+
+# read file and variables
+#f = cf.read('/nfs/a68/eetth/alaska/wrfout_201803_alaska_202_cf.nc') # change to your path and file
+#f = cf.read('/nfs/a68/eetth/alaska/wrfout_2018_03_alaska_10k_pbl_freerunning_cf.nc') # change to your path and file
+f = cf.read('/nfs/a68/eetth/alaska/chem_diagnostics/wrfout_mynn_19-24_cf.nc') # change to your path and file
+start = 24
+stop = 720 #non-inclusive of last one
+step = 24
+
+for i in np.arange(start,stop,step):
+
+    var = f.select('vmix_o3').subspace[i-24:i,:,:,:]  # change to any variable, can add multiple #must use variable standard name
+
+    # setup domain
+    lon_size = 99 # this is specific to your domain - i.e. how many grid boxes in longitude
+    lat_size = 99 # this is specific to your domain - i.e. how many grid boxes in latitude
+    lon_min = - 159.0 # this is specific to your domain
+    lon_max =  -134.3 # this is specific to your domain
+    lat_min = 59.8   # this is specific to your domain
+    lat_max = 69.7  # this is specific to your domain
+    
+    # Patch up the data to add X coordinates correctly
+    x=cf.DimensionCoordinate(data=cf.Data(range(lon_size))) 
+    x.axis='X' 
+    var.insert_dim(x, axis='dim3', key=var.axis(size=lon_size))
+    # Patch up the data to add Y coordinates correctly
+    y=cf.DimensionCoordinate(data=cf.Data(range(lat_size))) 
+    y.axis='Y' 
+    var.insert_dim(y, axis='dim2', key=var.axis(size=lat_size))
+    
+    # Create a grid to interpolate to (0.25 degree)
+    #lon_025=cf.DimensionCoordinate(data=cf.Data(np.arange(lon_min,lon_max,0.25), units='degrees_east')) 
+    #lat_025=cf.DimensionCoordinate(data=cf.Data(np.arange(lat_min,lat_max,0.25), units='degrees_north')) 
+    #dst_025={'longitude':lon_025, 'latitude':lat_025} 
+    # Create a grid to interpolate to (0.1 degree)
+    lon_010=cf.DimensionCoordinate(data=cf.Data(np.arange(lon_min,lon_max,0.1), units='degrees_east')) 
+    lat_010=cf.DimensionCoordinate(data=cf.Data(np.arange(lat_min,lat_max,0.1), units='degrees_north')) 
+    dst_010={'longitude':lon_010, 'latitude':lat_010} 
+    #Create a grid to interpolate to (0.5 degree)
+    #lon_050=cf.DimensionCoordinate(data=cf.Data(np.arange(lon_min,lon_max,0.5), units='degrees_east')) 
+    #lat_050=cf.DimensionCoordinate(data=cf.Data(np.arange(lat_min,lat_max,0.5), units='degrees_north')) 
+    #dst_050={'longitude':lon_050, 'latitude':lat_050} 
+    
+    # Regrid
+    var_010 = var.regrids(dst_010, method='bilinear')
+    #var_025 = var.regrids(dst_025, method='bilinear')
+    #var_050 = var.regrids(dst_050, method='bilinear')
+    
+
+    # Write data set to netCDF file
+    cf.write([var_010], '/nfs/a68/eetth/alaska/regridded/chem/2018_03_19-24_vmix_mynn_n2o5_edit_ibc_edit_0.1_cf_' + np.str(i) + '.nc', verbose=True, fmt='NETCDF4')
