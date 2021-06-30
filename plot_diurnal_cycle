@@ -1,0 +1,350 @@
+# Python script plotting diurnal cycle of surface observations and modelled surface concentrations of ozone. 
+
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Apr  4 12:15:57 2020
+
+@author: eetth
+"""
+
+
+from netCDF4 import Dataset as NetCDFFile
+import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.patches as mpatches
+import pandas as pd
+from scipy import stats
+
+def rmse(predictions, targets):
+    return np.sqrt(((predictions - targets) ** 2).nanmean())
+
+
+df = pd.read_csv('/nfs/a68/eetth/alaska/epa_data/fairbanks_obs_201803.csv')
+
+species = df['AQS Parameter Desc'] #first ozone is 8-hr running average begin hour, second ozone is 1 hour.
+date_LT = df['Date Local']
+time_LT = df['24 Hour Local']
+location = df['Site Num']
+POC = df['POC'] # 1 = hourly, 2 = 2-hourly, 3 = 4-hourly
+data_fairbanks = df['Sample Measurement']#you can also use df['column_name']  
+units = df['Units of Measure']
+sample_duration = df['Sample Duration']
+
+#Ozone
+o3_obs_loc = np.where((species=='Ozone')) # Nitric oxide (NO) Nitrogen dioxide (NO2)
+
+o3_obs = np.array(data_fairbanks[o3_obs_loc[0]])
+o3_obs_date = np.array(date_LT[o3_obs_loc[0]])
+o3_obs_time = np.array(time_LT[o3_obs_loc[0]])
+
+fairbanks_o3_ob = np.zeros(768)*np.nan
+
+for i in range(np.size(o3_obs)):
+    if np.int(o3_obs_date[i][5:7])==3:
+        day = np.int(o3_obs_date[i][8:10])
+        hour = np.int(o3_obs_time[i][0:2])
+        fairbanks_o3_ob[(day*24)+hour] = o3_obs[i]
+        
+fairbanks_o3_ob = fairbanks_o3_ob[24:]*1000
+
+#NO
+no_obs_loc = np.where((species=='Nitric oxide (NO)')) # Nitric oxide (NO) Nitrogen dioxide (NO2)
+
+no_obs = np.array(data_fairbanks[no_obs_loc[0]])
+no_obs_date = np.array(date_LT[no_obs_loc[0]])
+no_obs_time = np.array(time_LT[no_obs_loc[0]])
+
+fairbanks_no_ob = np.zeros(768)*np.nan
+
+for i in range(np.size(no_obs)):
+    if np.int(no_obs_date[i][5:7])==3:
+        day = np.int(no_obs_date[i][8:10])
+        hour = np.int(no_obs_time[i][0:2])
+        fairbanks_no_ob[(day*24)+hour] = no_obs[i]
+fairbanks_no_ob=fairbanks_no_ob[24:]
+fairbanks_no_sd = np.nanstd(fairbanks_no_ob)
+fairbanks_no_ob_max = fairbanks_no_ob + fairbanks_no_sd
+fairbanks_no_ob_min = fairbanks_no_ob - fairbanks_no_sd
+        
+#NO2        
+no2_obs_loc = np.where((species=='Nitrogen dioxide (NO2)')) # Nitric oxide (NO) Nitrogen dioxide (NO2)
+
+no2_obs = np.array(data_fairbanks[no2_obs_loc[0]])
+no2_obs_date = np.array(date_LT[no2_obs_loc[0]])
+no2_obs_time = np.array(time_LT[no2_obs_loc[0]])
+
+fairbanks_no2_ob = np.zeros(768)*np.nan
+
+for i in range(np.size(no2_obs)):
+    if np.int(no2_obs_date[i][5:7])==3:
+        day = np.int(no2_obs_date[i][8:10])
+        hour = np.int(no2_obs_time[i][0:2])
+        fairbanks_no2_ob[(day*24)+hour] = no2_obs[i]        
+fairbanks_no2_ob=fairbanks_no2_ob[24:]
+   
+
+#Temp      
+temp_obs_loc = np.where((species=='Outdoor Temperature')) # Nitric oxide (NO) Nitrogen dioxide (NO2)
+
+temp_obs = np.array(data_fairbanks[temp_obs_loc[0]])
+temp_obs_date = np.array(date_LT[temp_obs_loc[0]])
+temp_obs_time = np.array(time_LT[temp_obs_loc[0]])
+
+fairbanks_temp_ob = np.zeros(768)*np.nan
+
+for i in range(np.size(temp_obs)):
+    if np.int(temp_obs_date[i][5:7])==3:
+        day = np.int(temp_obs_date[i][8:10])
+        hour = np.int(temp_obs_time[i][0:2])
+        fairbanks_temp_ob[(day*24)+hour] = temp_obs[i]               
+fairbanks_temp_ob  = ((fairbanks_temp_ob[24:]-32.0)*(5.0/9.0))+273.15 #convert to K
+
+
+
+
+
+#Fairbanks Diurnal 
+fairbanks = fairbanks_o3_ob
+idx = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,0,1,2,3,4,5,6,7]
+
+#Fairbanks week 1
+fairbanks_week_1 = fairbanks[39:207]
+fairbanks_week_1_2d = np.reshape(fairbanks_week_1, (-1,24))
+fairbanks_week_1_dm = np.nanmean(fairbanks_week_1_2d, axis=0) # daily mean  
+fairbanks_week_1_dm_akdt = fairbanks_week_1_dm[idx]
+
+#Fairbanks week 2
+fairbanks_week_2 = fairbanks[207:375]
+fairbanks_week_2_2d = np.reshape(fairbanks_week_2, (-1,24))
+fairbanks_week_2_dm = np.nanmean(fairbanks_week_2_2d, axis=0) # daily mean
+fairbanks_week_2_dm_akdt = fairbanks_week_2_dm[idx]
+
+#Fairbanks week 3
+fairbanks_week_3 = fairbanks[375:543]
+fairbanks_week_3_2d = np.reshape(fairbanks_week_3, (-1,24))
+fairbanks_week_3_dm = np.nanmean(fairbanks_week_3_2d, axis=0) # daily mean
+fairbanks_week_3_dm_akdt = fairbanks_week_3_dm[idx]
+
+#Fairbanks week 4
+fairbanks_week_4 = fairbanks[543:711]
+fairbanks_week_4_2d = np.reshape(fairbanks_week_4, (-1,24))
+fairbanks_week_4_dm = np.nanmean(fairbanks_week_4_2d, axis=0) # daily mean
+fairbanks_week_4_dm_akdt = fairbanks_week_4_dm[idx]
+
+
+
+# Bring in WRF data
+
+units = 'Ozone (ppbv)' #$\mathregular{_{3}}$
+variable = 'o3_e'
+dir_1 = 'o3'
+name = 'ozone'
+
+wrf_mynn_freerunning_path = NetCDFFile('/nfs/a68/eetth/alaska/regridded/'+np.str(dir_1)+'/2018_03_'+np.str(name)+'_mynn_edit_n2o5_edit_ibc_edit_0.1_cf.nc') #file read in location 
+wrf_mynn_path = NetCDFFile('/nfs/a68/eetth/alaska/regridded/'+np.str(dir_1)+'/2018_03_'+np.str(name)+'_mynn_n2o5_edit_0.1_cf.nc') #file read in location 
+wrf_mynn_freerunning_upper_trop_path = NetCDFFile('/nfs/a68/eetth/alaska/regridded/'+np.str(dir_1)+'/2018_03_'+np.str(name)+'_mynn_n2o5_edit_2_nox_0.1_cf.nc') #file read in location 
+#wrf_mynn_nox_edit_path = NetCDFFile('/nfs/a68/eetth/alaska/regridded/'+np.str(dir_1)+'/2018_03_'+np.str(name)+'_mynn_nox_edit_0.1_cf.nc')
+#wrf_mynn_nox_edit_1_5_path = NetCDFFile('/nfs/a68/eetth/alaska/regridded/'+np.str(dir_1)+'/2018_03_'+np.str(name)+'_mynn_nox_edit_1_5_0.1_cf.nc')
+
+
+
+#wrf_ysu_path = NetCDFFile('/nfs/a68/eetth/alaska/regridded/'+np.str(dir_1)+'/2018_03_'+np.str(name)+'_ysu_0.1_cf.nc') #file read in location 
+#wrf_ysu_freerunning_path = NetCDFFile('/nfs/a68/eetth/alaska/regridded/'+np.str(dir_1)+'/2018_03_'+np.str(name)+'_ysu_freerunning_0.1_cf.nc') #file read in location 
+#wrf_ysu_freerunning_upper_trop_path = NetCDFFile('/nfs/a68/eetth/alaska/regridded/'+np.str(dir_1)+'/2018_03_'+np.str(name)+'_ysu_freerunning_upper_trop_0.1_cf.nc') #file read in location 
+
+
+
+#WRF DateTime
+
+wrf_mynn_datetime_path = NetCDFFile('/nfs/a68/eetth/alaska/wrfout_2018_03_mynn_cf.nc')
+wrf_mynn_datetime = wrf_mynn_datetime_path.variables['DateTime'][:]
+
+
+wrf_ysu_datetime_path = NetCDFFile('/nfs/a68/eetth/alaska/wrfout_2018_03_ysu_cf.nc')
+wrf_ysu_datetime = wrf_ysu_datetime_path.variables['DateTime'][:]
+
+
+       
+#WRF MYNN    
+wrf_mynn_data = wrf_mynn_path.variables[np.str(variable)][:,0,50,113]*1000
+
+#week 1 
+wrf_mynn_data_week_1 = wrf_mynn_data[:168]
+wrf_mynn_data_week_1_2d = np.reshape(wrf_mynn_data_week_1, (-1,24))
+wrf_mynn_data_week_1_dm = np.nanmean(wrf_mynn_data_week_1_2d, axis=0) # daily mean
+wrf_mynn_data_week_1_dm_akdt = wrf_mynn_data_week_1_dm[idx]
+
+#week 2 
+wrf_mynn_data_week_2 = wrf_mynn_data[167:335]
+wrf_mynn_data_week_2_2d = np.reshape(wrf_mynn_data_week_2, (-1,24))
+wrf_mynn_data_week_2_dm = np.nanmean(wrf_mynn_data_week_2_2d, axis=0) # daily mean
+wrf_mynn_data_week_2_dm_akdt = wrf_mynn_data_week_2_dm[idx]
+
+#week 3 
+wrf_mynn_data_week_3 = wrf_mynn_data[335:503]
+wrf_mynn_data_week_3_2d = np.reshape(wrf_mynn_data_week_3, (-1,24))
+wrf_mynn_data_week_3_dm = np.nanmean(wrf_mynn_data_week_3_2d, axis=0) # daily mean
+wrf_mynn_data_week_3_dm_akdt = wrf_mynn_data_week_3_dm[idx]
+
+#week 4 
+wrf_mynn_data_week_4 = wrf_mynn_data[503:671]
+wrf_mynn_data_week_4_2d = np.reshape(wrf_mynn_data_week_4, (-1,24))
+wrf_mynn_data_week_4_dm = np.nanmean(wrf_mynn_data_week_4_2d, axis=0) # daily mean
+wrf_mynn_data_week_4_dm_akdt = wrf_mynn_data_week_4_dm[idx]
+
+
+
+#WRF MYNN FREERUNNING
+wrf_mynn_freerunning_data = wrf_mynn_freerunning_path.variables[np.str(variable)][:,0,50,113]*1000
+
+#week 1 
+wrf_mynn_freerunning_data_week_1 = wrf_mynn_freerunning_data[:168]
+wrf_mynn_freerunning_data_week_1_2d = np.reshape(wrf_mynn_freerunning_data_week_1, (-1,24))
+wrf_mynn_freerunning_data_week_1_dm = np.nanmean(wrf_mynn_freerunning_data_week_1_2d, axis=0) # daily mean
+wrf_mynn_freerunning_data_week_1_dm_akdt = wrf_mynn_freerunning_data_week_1_dm[idx]
+
+#week 2 
+wrf_mynn_freerunning_data_week_2 = wrf_mynn_freerunning_data[167:335]
+wrf_mynn_freerunning_data_week_2_2d = np.reshape(wrf_mynn_freerunning_data_week_2, (-1,24))
+wrf_mynn_freerunning_data_week_2_dm = np.nanmean(wrf_mynn_freerunning_data_week_2_2d, axis=0) # daily mean
+wrf_mynn_freerunning_data_week_2_dm_akdt = wrf_mynn_freerunning_data_week_2_dm[idx]
+
+#week 3 
+wrf_mynn_freerunning_data_week_3 = wrf_mynn_freerunning_data[335:503]
+wrf_mynn_freerunning_data_week_3_2d = np.reshape(wrf_mynn_freerunning_data_week_3, (-1,24))
+wrf_mynn_freerunning_data_week_3_dm = np.nanmean(wrf_mynn_freerunning_data_week_3_2d, axis=0) # daily mean
+wrf_mynn_freerunning_data_week_3_dm_akdt = wrf_mynn_freerunning_data_week_3_dm[idx]
+
+#week 4 
+wrf_mynn_freerunning_data_week_4 = wrf_mynn_freerunning_data[503:671]
+wrf_mynn_freerunning_data_week_4_2d = np.reshape(wrf_mynn_freerunning_data_week_4, (-1,24))
+wrf_mynn_freerunning_data_week_4_dm = np.nanmean(wrf_mynn_freerunning_data_week_4_2d, axis=0) # daily mean
+wrf_mynn_freerunning_data_week_4_dm_akdt = wrf_mynn_freerunning_data_week_4_dm[idx]
+
+
+
+#WRF MYNN FREERUNNING PBL
+wrf_mynn_freerunning_upper_trop_data = wrf_mynn_freerunning_upper_trop_path.variables[np.str(variable)][:,0,50,113]*1000
+
+#week 1 
+wrf_mynn_freerunning_upper_trop_data_week_1 = wrf_mynn_freerunning_upper_trop_data[:168]
+wrf_mynn_freerunning_upper_trop_data_week_1_2d = np.reshape(wrf_mynn_freerunning_upper_trop_data_week_1, (-1,24))
+wrf_mynn_freerunning_upper_trop_data_week_1_dm = np.nanmean(wrf_mynn_freerunning_upper_trop_data_week_1_2d, axis=0) # daily mean
+wrf_mynn_freerunning_upper_trop_data_week_1_dm_akdt = wrf_mynn_freerunning_upper_trop_data_week_1_dm[idx]
+
+#week 2 
+wrf_mynn_freerunning_upper_trop_data_week_2 = wrf_mynn_freerunning_upper_trop_data[167:335]
+wrf_mynn_freerunning_upper_trop_data_week_2_2d = np.reshape(wrf_mynn_freerunning_upper_trop_data_week_2, (-1,24))
+wrf_mynn_freerunning_upper_trop_data_week_2_dm = np.nanmean(wrf_mynn_freerunning_upper_trop_data_week_2_2d, axis=0) # daily mean
+wrf_mynn_freerunning_upper_trop_data_week_2_dm_akdt = wrf_mynn_freerunning_upper_trop_data_week_2_dm[idx]
+
+#week 3 
+wrf_mynn_freerunning_upper_trop_data_week_3 = wrf_mynn_freerunning_upper_trop_data[335:503]
+wrf_mynn_freerunning_upper_trop_data_week_3_2d = np.reshape(wrf_mynn_freerunning_upper_trop_data_week_3, (-1,24))
+wrf_mynn_freerunning_upper_trop_data_week_3_dm = np.nanmean(wrf_mynn_freerunning_upper_trop_data_week_3_2d, axis=0) # daily mean
+wrf_mynn_freerunning_upper_trop_data_week_3_dm_akdt = wrf_mynn_freerunning_upper_trop_data_week_3_dm[idx]
+
+#week 4 
+wrf_mynn_freerunning_upper_trop_data_week_4 = wrf_mynn_freerunning_upper_trop_data[503:671]
+wrf_mynn_freerunning_upper_trop_data_week_4_2d = np.reshape(wrf_mynn_freerunning_upper_trop_data_week_4, (-1,24))
+wrf_mynn_freerunning_upper_trop_data_week_4_dm = np.nanmean(wrf_mynn_freerunning_upper_trop_data_week_4_2d, axis=0) # daily mean
+wrf_mynn_freerunning_upper_trop_data_week_4_dm_akdt = wrf_mynn_freerunning_upper_trop_data_week_4_dm[idx]
+
+
+
+
+
+#plot b - Week 2
+ax1 = fig.add_subplot(2,2,1)
+
+plt.ylim(ymin, ymax)
+plt.xlim(xmin, xmax)
+hours = range(24)
+plt.title('(a) Week 1 (10/03/18 - 17/03/18)',fontsize=12)
+plt.plot(fairbanks_week_2_dm_akdt,color='k', label='Fairbanks',linewidth=2.5)
+
+plt.plot(wrf_mynn_data_week_2_dm_akdt,color='firebrick', label='MYNN',linewidth=2.5)
+plt.plot(wrf_mynn_freerunning_data_week_2_dm_akdt,color='darkorchid', label='MYNN (IBC*0.8)',linewidth=2.5)
+plt.plot(wrf_mynn_freerunning_upper_trop_data_week_2_dm_akdt,color='darkorange', label='MYNN (NOx*2)',linewidth=2.5)
+#plt.plot(wrf_mynn_nox_edit_data_week_2_dm_akdt,color='k', label='MYNN-Nox Edit (*2.0)',linewidth=2.5)
+#plt.plot(wrf_mynn_nox_edit_1_5_data_week_2_dm_akdt,color='slategray', label='MYNN-Nox Edit (*1.5)',linewidth=2.5)
+#
+#plt.plot(wrf_ysu_data_week_2_dm_akdt,color='olivedrab', label='YSU',linewidth=2.5)
+#plt.plot(wrf_ysu_freerunning_data_week_2_dm_akdt,color='darkorange', label='YSU-FR',linewidth=2.5)
+#plt.plot(wrf_ysu_freerunning_upper_trop_data_week_2_dm_akdt,color='cyan', label='YSU-FR PBL',linewidth=2.5)
+
+
+plt.xticks(np.arange(0,24,2), fontsize='12')
+plt.xlabel('AKDT Hour (UTC-8)', fontsize=14)
+plt.ylabel(np.str(units), fontsize=14)
+
+
+
+
+
+plt.legend(bbox_to_anchor=(2, -0.5),fontsize='14')
+
+
+
+
+#plot c - Week 3
+ax1 = fig.add_subplot(2,2,2)
+
+plt.ylim(ymin, ymax)
+plt.xlim(xmin, xmax)
+hours = range(24)
+plt.title('(b) Week 2 (17/03/18 - 23/03/18)',fontsize=12)
+plt.plot(fairbanks_week_3_dm_akdt,color='k', label='Fairbanks',linewidth=2.5)
+
+plt.plot(wrf_mynn_data_week_3_dm_akdt,color='firebrick', label='MYNN',linewidth=2.5)
+plt.plot(wrf_mynn_freerunning_data_week_3_dm_akdt,color='darkorchid', label='MYNN-FR',linewidth=2.5)
+plt.plot(wrf_mynn_freerunning_upper_trop_data_week_3_dm_akdt,color='darkorange', label='MYNN-FR PBL',linewidth=2.5)
+#plt.plot(wrf_mynn_nox_edit_data_week_3_dm_akdt,color='k', label='MYNN-Nox Edit (*2.0)',linewidth=2.5)
+#plt.plot(wrf_mynn_nox_edit_1_5_data_week_3_dm_akdt,color='slategray', label='MYNN-Nox Edit (*1.5)',linewidth=2.5)
+#
+#
+#plt.plot(wrf_ysu_data_week_3_dm_akdt,color='olivedrab', label='YSU',linewidth=2.5)
+#plt.plot(wrf_ysu_freerunning_data_week_3_dm_akdt,color='darkorange', label='YSU-FR',linewidth=2.5)
+#plt.plot(wrf_ysu_freerunning_upper_trop_data_week_3_dm_akdt,color='cyan', label='YSU-FR PBL',linewidth=2.5)
+
+
+#plt.legend(loc=0, prop={'size':8})
+plt.xticks(np.arange(0,24,2), fontsize='12')
+plt.xlabel('AKDT Hour (UTC-8)', fontsize=14)
+plt.ylabel(np.str(units), fontsize=14)
+
+
+
+
+
+#plot b - Week 4
+ax1 = fig.add_subplot(2,2,3)
+
+plt.ylim(ymin, ymax)
+plt.xlim(xmin, xmax)
+hours = range(24)
+plt.title('(c) Week 3 (23/03/18 - 31/03/18)',fontsize=12)
+plt.plot(fairbanks_week_4_dm_akdt,color='k', label='Fairbanks',linewidth=2.5)
+
+plt.plot(wrf_mynn_data_week_4_dm_akdt,color='firebrick', label='MYNN',linewidth=2.5)
+plt.plot(wrf_mynn_freerunning_data_week_4_dm_akdt,color='darkorchid', label='MYNN-FR',linewidth=2.5)
+plt.plot(wrf_mynn_freerunning_upper_trop_data_week_4_dm_akdt,color='darkorange', label='MYNN-FR PBL',linewidth=2.5)
+#plt.plot(wrf_mynn_nox_edit_data_week_4_dm_akdt,color='k', label='MYNN-Nox Edit (*2.0)',linewidth=2.5)
+#plt.plot(wrf_mynn_nox_edit_1_5_data_week_4_dm_akdt,color='slategray', label='MYNN-Nox Edit (*1.5)',linewidth=2.5)
+#
+#
+#
+#plt.plot(wrf_ysu_data_week_4_dm_akdt,color='olivedrab', label='YSU',linewidth=2.5)
+#plt.plot(wrf_ysu_freerunning_data_week_4_dm_akdt,color='darkorange', label='YSU-FR',linewidth=2.5)
+#plt.plot(wrf_ysu_freerunning_upper_trop_data_week_4_dm_akdt,color='cyan', label='YSU-FR PBL',linewidth=2.5)
+
+
+#plt.legend(loc=0, prop={'size':8})
+plt.xticks(np.arange(0,24,2), fontsize='12')
+plt.xlabel('AKDT Hour (UTC-8)', fontsize=14)
+plt.ylabel(np.str(units), fontsize=14)
+
+
+
+
