@@ -1,0 +1,332 @@
+#Python script to plot multi-panel bar chart, with translucent bars stacked showing north of 60 deg contribution 
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+
+# By Land type TOTAL DOMAIN
+# xx = control, yy = anthro_off, zz = fires_off 
+
+# Fractional Bias Mean Bias - Forest
+ecl_for = [4.949753097,9.081299133,7.741456452,6.513022375]
+ene_for = [4.803748892,8.682008994,7.171817699,6.15451761]
+tra_for =[4.733277385,8.499114744,7.25793712,5.969473231]
+fires_for =[4.730234211,8.302669449,7.576044975,6.414650382]
+
+## Fractional Bias Mean Bias - Shrubland
+ecl_shr = [1.128779935,2.40539101,2.736469749,2.178066715]
+ene_shr = [1.102343143,2.325088309,2.571110721,2.083303534]
+tra_shr =[1.084693741,2.277665494,2.601944819,2.019497549]
+fires_shr =[1.091910584,2.285666127,2.691806492,2.146489697]
+
+## Fractional Bias Mean Bias - Savanna & Grassland
+ecl_sav = [2.551918377,3.934258164,3.699701574,4.089740545]
+ene_sav = [2.477507978,3.770868714,3.3979492,3.879417732]
+tra_sav = [2.45550151,3.737289505,3.457757286,3.827248]
+fires_sav =[2.472817821,3.820909901,3.648336158,4.030219321]
+
+## Fractional Bias Mean Bias - Permenant Wetlands
+ecl_wet = [0.272359621,0.435194939,0.43929533,0.445168246]
+ene_wet = [0.266307138,0.414776849,0.403494994,0.423358199]
+tra_wet = [0.261950934,0.407816647,0.407085038,0.411992571]
+fires_wet =[0.260196034,0.422110461,0.432406634,0.438817623]
+
+## Fractional Bias Mean Bias - Urban & Built Up
+ecl_urb = [0.063156303,0.128965825,0.151670032,0.133968265]
+ene_urb = [0.061956461,0.125840696,0.143469596,0.129594665]
+tra_urb = [0.061300468,0.123834723,0.146314558,0.1269474]
+fires_urb = [0.062002884,0.125718259,0.15002437,0.132087764]
+
+## Fractional Bias Mean Bias - Tundra
+ecl_tun = [0.983646528,2.796490231,3.384110764,2.323035733]
+ene_tun = [0.966262685,2.745426042,3.237434809,2.252266857]
+tra_tun =[0.94806768,2.69914426,3.290389188,2.171238689]
+fires_tun =[0.965139709,2.75477013,3.353959252,2.291586638]
+
+## Fractional Bias Mean Bias - Croplands & Vegetation
+ecl_cro = [1.719221607,2.45983699,2.4492621,2.598619139]
+ene_cro = [1.679995243,2.337760332,2.238638947,2.472150964]
+tra_cro = [1.657297567,2.298513538,2.257592789,2.41018225]
+fires_cro =[1.635886418,2.408184674,2.407721815,2.562059011]
+
+## Fractional Bias Mean Bias - Snow,Ice & Water
+ecl_snw =[1.503833345,1.324438118,1.042155523,1.108520419]
+ene_snw = [1.482311672,1.309410234,0.997954395,1.090641238]
+tra_snw =[1.471645598,1.301910367,1.025869857,1.076608034]
+fires_snw =[1.489180731,1.309203297,1.033810859,1.101605213]
+
+
+
+
+# By Land type NORTH OF 60 DEGREES
+# xx = control, yy = anthro_off, zz = fires_off 
+
+## Fractional Bias Mean Bias - Forest NORTH OF 60 DEGREES
+ecl_for_60N = [2.287338964,4.167970318,3.808102003,3.047896328]
+ene_for_60N= [2.2282083,4.036189962,3.593552105,2.929572148]
+tra_for_60N= [2.19963951,3.951943835,3.64620945,2.846627004]
+fires_for_60N = [2.218048984,3.890102782,3.739557623,3.00820531]
+
+## Fractional Bias Mean Bias - Shrubland NORTH OF 60 DEGREES
+ecl_shr_60N = [0.606278933,1.385033383,1.676816624,1.299451093]
+ene_shr_60N = [0.591739096,1.353789022,1.591117327,1.251265183]
+tra_shr_60N = [0.582547684,1.325721808,1.612153253,1.210819274]
+fires_shr_60N =[0.590376252,1.339544372,1.65244342,1.279040383]
+
+## Fractional Bias Mean Bias - Savanna & Grassland NORTH OF 60 DEGREES
+ecl_sav_60N = [0.133223279,0.266801373,0.302233946,0.241671206]
+ene_sav_60N = [0.129708433,0.260916984,0.287696237,0.234043646]
+tra_sav_60N = [0.128094915,0.256164664,0.293406902,0.227230987]
+fires_sav_60N = [0.129732673,0.259605303,0.298731301,0.23858797]
+
+## Fractional Bias Mean Bias - Permenant Wetlands NORTH OF 60 DEGREES
+ecl_wet_60N = [0.046892274,0.084027589,0.097255812,0.077265492]
+ene_wet_60N = [0.045579224,0.0819948,0.092567318,0.074826646]
+tra_wet_60N = [0.045031337,0.080564035,0.09427058,0.072655346]
+fires_wet_60N = [0.045723733,0.081584798,0.096050622,0.076193046]
+
+## Fractional Bias Mean Bias - Urban & Built Up NORTH OF 60 DEGREES
+ecl_urb_60N = [0.024484738,0.069632064,0.085270511,0.068296931]
+ene_urb_60N = [0.024113196,0.068541696,0.081516244,0.066455938]
+tra_urb_60N = [0.023763071,0.067270449,0.083379809,0.064771661]
+fires_urb_60N = [0.024129268,0.068644924,0.08453349,0.067540721]
+
+## Fractional Bias Mean Bias - Tundra NORTH OF 60 DEGREES
+ecl_tun_60N = [0.982026313,2.790792809,3.380880569,2.320546383]
+ene_tun_60N= [0.964684167,2.739933616,3.23441876,2.249920189]
+tra_tun_60N= [0.946514041,2.693744293,3.287371131,2.168991401]
+fires_tun_60N = [0.963570018,2.749823577,3.350922116,2.28914842]
+
+## Fractional Bias Mean Bias - Croplands & Vegetation NORTH OF 60 DEGREES
+ecl_cro_60N =[0.14763766,0.264512378,0.289648658,0.246948334]
+ene_cro_60N = [0.145035163,0.260115588,0.276921558,0.240932694]
+tra_cro_60N = [0.143273534,0.256290609,0.282786702,0.235101363]
+fires_cro_60N = [0.145591053,0.261006978,0.286935178,0.244692126]
+
+## Fractional Bias Mean Bias - Snow,Ice & Water NORTH OF 60 DEGREES
+ecl_snw_60N =[1.461493242,1.261341319,0.983264,1.051040355]
+ene_snw_60N = [1.441170009,1.248526358,0.942979025,1.03585296]
+tra_snw_60N = [1.431070345,1.242065616,0.970532776,1.02323759]
+fires_snw_60N = [1.447985337,1.251421737,0.976914997,1.045240154]
+
+N = 4
+ind = np.arange(N)  # the x locations for the groups
+width = 0.15       # the width of the bars
+
+fig = plt.figure(figsize=(10,5))
+plt.subplots_adjust(top=1.1,hspace=0.75,wspace=0.05)
+
+
+
+#Plot a - Croplands & Vegetation
+ax1 = fig.add_subplot(421)
+
+plt.grid(zorder=0)
+ax1.bar(ind,ecl_cro,width, align='center',lw=1,color='b',label = 'ECLIPSE_SCALED',zorder=3)
+ax1.bar(ind,ecl_cro_60N,width, align='center',alpha=0.7,lw=1,color='white',label = 'ECLIPSE_SCALED (Above 60$^\circ$ North)',zorder=3)
+ax1.bar(ind+width,fires_cro,width, align='center',lw=1,color='r',label = 'Fires_off',zorder=3)
+ax1.bar(ind+width,fires_cro_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Fires_off (Above 60$^\circ$ North)',zorder=3)
+ax1.bar(ind+width*2,tra_cro,width, align='center',lw=1,color='c',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax1.bar(ind+width*2,tra_cro_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+ax1.bar(ind+width*3,ene_cro,width, align='center',lw=1,color='g',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax1.bar(ind+width*3,ene_cro_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+
+#make color bar seperate
+ax1.set_ylabel('O$\mathregular{_{3}}$ (Tg)',size=14)
+ax1.set_xticks(ind+width)
+ax1.autoscale(tight=True)
+plt.yticks(np.arange(0,15,3),size='14')
+
+ax1.set_xticklabels( ('','','','','',''),fontsize=12 )
+
+plt.xticks(rotation=45)
+
+plt.title('(a) Cropland',size=14)
+
+
+
+#Plot b - Forests
+ax2 = fig.add_subplot(422)
+plt.grid(zorder=0)
+ax2.bar(ind,ecl_for,width, align='center',lw=1,color='b',label = 'ECLIPSE_SCALED',zorder=3)
+ax2.bar(ind,ecl_for_60N,width, align='center',alpha=0.7,lw=1,color='white',label = 'ECLIPSE_SCALED (Above 60$^\circ$ North)',zorder=3)
+ax2.bar(ind+width,fires_for,width, align='center',lw=1,color='r',label = 'Fires_off',zorder=3)
+ax2.bar(ind+width,fires_for_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Fires_off (Above 60$^\circ$ North)',zorder=3)
+ax2.bar(ind+width*2,tra_for,width, align='center',lw=1,color='c',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax2.bar(ind+width*2,tra_for_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+ax2.bar(ind+width*3,ene_for,width, align='center',lw=1,color='g',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax2.bar(ind+width*3,ene_for_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+
+#make color bar seperate
+
+ax2.set_xticks(ind+width)
+ax2.autoscale(tight=True)
+plt.yticks(np.arange(0,15,3),size='14')
+ax2.set_xticklabels( ('April','May','June','July','August','September'),fontsize=14 )
+ax2.set_xticklabels( ('','','','','',''),fontsize=14 )
+ax2.set_yticklabels( ('','','','','',''),fontsize=14 )
+plt.xticks(rotation=45)
+
+plt.title('(b) Forests',size=14)
+
+
+
+#Plot c - Snow, Ice & Water
+ax3 = fig.add_subplot(423)
+
+
+plt.grid(zorder=0)
+ax3.bar(ind,ecl_snw,width, align='center',lw=1,color='b',label = 'ECLIPSE_SCALED',zorder=3)
+ax3.bar(ind,ecl_snw_60N,width, align='center',alpha=0.7,lw=1,color='white',label = 'ECLIPSE_SCALED (Above 60$^\circ$ North)',zorder=3)
+ax3.bar(ind+width,fires_snw,width, align='center',lw=1,color='r',label = 'Fires_off',zorder=3)
+ax3.bar(ind+width,fires_snw_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Fires_off (Above 60$^\circ$ North)',zorder=3)
+ax3.bar(ind+width*2,tra_snw,width, align='center',lw=1,color='c',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax3.bar(ind+width*2,tra_snw_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+ax3.bar(ind+width*3,ene_snw,width, align='center',lw=1,color='g',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax3.bar(ind+width*3,ene_snw_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+
+#make color bar seperate
+ax3.set_ylabel('O$\mathregular{_{3}}$ (Tg)',size=14)
+ax3.set_xticks(ind+width)
+ax3.autoscale(tight=True)
+plt.yticks(np.arange(0,15,3),size='14')
+ax3.set_xticklabels( ('','','','','',''),fontsize=14 )
+
+plt.xticks(rotation=45)
+plt.title('(c) Snow, Ice & Water',size=14)
+
+
+
+#Plot d - Savanna & Grassland 
+ax4 = fig.add_subplot(424)
+
+plt.grid(zorder=0)
+ax4.bar(ind,ecl_sav,width, align='center',lw=1,color='b',label = 'ECLIPSE_SCALED',zorder=3)
+ax4.bar(ind,ecl_sav_60N,width, align='center',alpha=0.7,lw=1,color='white',label = 'ECLIPSE_SCALED (Above 60$^\circ$ North)',zorder=3)
+ax4.bar(ind+width,fires_sav,width, align='center',lw=1,color='r',label = 'Fires_off',zorder=3)
+ax4.bar(ind+width,fires_sav_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Fires_off (Above 60$^\circ$ North)',zorder=3)
+ax4.bar(ind+width*2,tra_sav,width, align='center',lw=1,color='c',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax4.bar(ind+width*2,tra_sav_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+ax4.bar(ind+width*3,ene_sav,width, align='center',lw=1,color='g',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax4.bar(ind+width*3,ene_sav_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+
+#make color bar seperate
+ax4.set_xticks(ind+width)
+ax4.autoscale(tight=True)
+plt.yticks(np.arange(0,15,3),size='14')
+ax4.set_xticklabels( ('','','','','',''),fontsize=14 )
+ax4.set_yticklabels( ('','','','','',''),fontsize=14 )
+plt.xticks(rotation=45)
+plt.title('(d) Savanna & Grassland',size=14)
+
+
+
+#Plot e - Tundra
+ax5 = fig.add_subplot(425)
+
+plt.grid(zorder=0)
+ax5.bar(ind,ecl_tun,width, align='center',lw=1,color='b',label = 'ECLIPSE_SCALED',zorder=3)
+ax5.bar(ind,ecl_tun_60N,width, align='center',alpha=0.7,lw=1,color='white',label = 'ECLIPSE_SCALED (Above 60$^\circ$ North)',zorder=3)
+ax5.bar(ind+width,fires_tun,width, align='center',lw=1,color='r',label = 'Fires_off',zorder=3)
+ax5.bar(ind+width,fires_tun_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Fires_off (Above 60$^\circ$ North)',zorder=3)
+ax5.bar(ind+width*2,tra_tun,width, align='center',lw=1,color='c',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax5.bar(ind+width*2,tra_tun_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+ax5.bar(ind+width*3,ene_tun,width, align='center',lw=1,color='g',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax5.bar(ind+width*3,ene_tun_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+
+#make color bar seperate
+ax5.set_ylabel('O$\mathregular{_{3}}$ (Tg)',size=14)
+ax5.set_xticks(ind+width)
+ax5.autoscale(tight=True)
+plt.yticks(np.arange(0,15,3),size='14')
+ax5.set_xticklabels( ('','','','','',''),fontsize=14 )
+plt.xticks(rotation=45)
+plt.title('(e) Tundra',size=14)
+
+
+
+#Plot f - Permanent Wetlands
+ax6 = fig.add_subplot(426)
+
+plt.grid(zorder=0)
+ax6.bar(ind,ecl_wet,width, align='center',lw=1,color='b',label = 'ECLIPSE_SCALED',zorder=3)
+ax6.bar(ind,ecl_wet_60N,width, align='center',alpha=0.7,lw=1,color='white',label = 'ECLIPSE_SCALED (Above 60$^\circ$ North)',zorder=3)
+ax6.bar(ind+width,fires_wet,width, align='center',lw=1,color='r',label = 'Fires_off',zorder=3)
+ax6.bar(ind+width,fires_wet_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Fires_off (Above 60$^\circ$ North)',zorder=3)
+ax6.bar(ind+width*2,tra_wet,width, align='center',lw=1,color='c',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax6.bar(ind+width*2,tra_wet_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+ax6.bar(ind+width*3,ene_wet,width, align='center',lw=1,color='g',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax6.bar(ind+width*3,ene_wet_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+
+#make color bar seperate
+ax6.set_xticks(ind+width)
+ax6.autoscale(tight=True)
+plt.yticks(np.arange(0,15,3),size='14')
+ax6.set_xticklabels( ('','','','','',''),fontsize=14 )
+ax6.set_yticklabels( ('','','','','',''),fontsize=14 )
+plt.xticks(rotation=45)
+plt.title('(f) Permanent Wetlands',size=14)
+
+
+
+#Plot g - Urban & built Up
+ax7 = fig.add_subplot(427)
+
+plt.grid(zorder=0)
+ax7.bar(ind,ecl_urb,width, align='center',lw=1,color='b',label = 'ECLIPSE_SCALED',zorder=3)
+ax7.bar(ind,ecl_urb_60N,width, align='center',alpha=0.7,lw=1,color='white',label = 'ECLIPSE_SCALED (Above 60$^\circ$ North)',zorder=3)
+ax7.bar(ind+width,fires_urb,width, align='center',lw=1,color='r',label = 'Fires_off',zorder=3)
+ax7.bar(ind+width,fires_urb_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Fires_off (Above 60$^\circ$ North)',zorder=3)
+ax7.bar(ind+width*2,tra_urb,width, align='center',lw=1,color='c',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax7.bar(ind+width*2,tra_urb_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+ax7.bar(ind+width*3,ene_urb,width, align='center',lw=1,color='g',label = 'Added Soil NO$\mathregular{_{x}}$',zorder=3)
+ax7.bar(ind+width*3,ene_urb_60N,width, align='center',lw=1,alpha=0.7,color='white',label = 'Added Soil NO$\mathregular{_{x}}$ (Above 60$^\circ$ North)',zorder=3)
+
+#make color bar seperate
+ax7.set_ylabel('O$\mathregular{_{3}}$ (Tg)',size=14)
+ax7.set_xticks(ind+width)
+ax7.autoscale(tight=True)
+plt.yticks(np.arange(0,15,3),size='14')
+ax7.set_xticklabels( ('May','June','July','August'),fontsize=14 )
+plt.xticks(rotation=45)
+
+plt.title('(g) Urban & Built Up',size=14)
+
+
+
+#Plot h - Shrubland
+ax8 = fig.add_subplot(428)
+
+plt.grid(zorder=0)
+ax8.bar(ind,ecl_shr,width, align='center',lw=1,color='b',label = 'ECLIPSE',zorder=3)
+ax8.bar(ind,ecl_shr_60N,width, align='center',alpha=0.7,lw=1,color='white',zorder=3)
+ax8.bar(ind,ecl_shr_60N,width, align='center',alpha=0.25,lw=1,color='b',label = 'ECLIPSE (Above 60$^\circ$ North)',zorder=3)
+
+
+ax8.bar(ind+width,fires_shr,width, align='center',lw=1,color='r',label = 'Fires_off',zorder=3)
+ax8.bar(ind+width,fires_shr_60N,width, align='center',lw=1,alpha=0.7,color='white',zorder=3)
+ax8.bar(ind+width,fires_shr_60N,width, align='center',lw=1,alpha=0.25,color='r',label = 'Fires_off (Above 60$^\circ$ North)',zorder=3,)
+
+ax8.bar(ind+width*2,tra_shr,width, align='center',lw=1,color='c',label = 'Transport Emissions Off',zorder=3)
+ax8.bar(ind+width*2,tra_shr_60N,width, align='center',lw=1,alpha=0.7,color='white',zorder=3)
+ax8.bar(ind+width*2,tra_shr_60N,width, align='center',lw=1,alpha=0.25,color='c',label = 'Transport Emissions Off (Above 60$^\circ$ North)',zorder=3)
+
+ax8.bar(ind+width*3,ene_shr,width, align='center',lw=1,color='g',label = 'Energy Emissions Off',zorder=3)
+ax8.bar(ind+width*3,ene_shr_60N,width, align='center',lw=1,alpha=0.7,color='w',zorder=3)
+ax8.bar(ind+width*3,ene_shr_60N,width, align='center',lw=1,alpha=0.25,color='g',label = 'Energy Emissions Off (Above 60$^\circ$ North)',zorder=3)
+
+ax8.set_xticks(ind+width)
+ax8.autoscale(tight=True)
+plt.yticks(np.arange(0,15,3),size='14')
+ax8.set_xticklabels( ('May','June','July','August'),fontsize=14 )
+ax8.set_yticklabels( ('','','','','',''),fontsize=14 )
+plt.xticks(rotation=45)
+plt.title('(h) Shrubland',size=14)
+
+
+
+#plotting legend
+
+plt.legend(bbox_to_anchor=(2.2, 4.65),fontsize=12)
